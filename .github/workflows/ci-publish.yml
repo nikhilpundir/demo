@@ -11,9 +11,25 @@ env:
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
-  # JOB 1: TEST ONLY
   test:
     runs-on: ubuntu-latest
+    
+    # 1. DEFINE THE DATABASE SERVICE
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_DATABASE: testdb
+          MYSQL_ROOT_PASSWORD: root
+        ports:
+          - 3306:3306
+        # Health check to ensure MySQL is ready before tests start
+        options: >-
+          --health-cmd="mysqladmin ping"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -21,14 +37,19 @@ jobs:
       - name: Set up JDK 21
         uses: actions/setup-java@v4
         with:
-          java-version: '21'       # Updated to Java 21
+          java-version: '21'
           distribution: 'temurin'
-          cache: maven             # Change to 'gradle' if using Gradle
+          cache: maven
 
+      # 2. RUN TESTS WITH DB CONNECTION DETAILS
       - name: Run Tests
-        run: mvn test
+        run: >
+          mvn test
+          -Dspring.datasource.url=jdbc:mysql://localhost:3306/testdb
+          -Dspring.datasource.username=root
+          -Dspring.datasource.password=root
+          -Dspring.jpa.hibernate.ddl-auto=create-drop
 
-  # JOB 2: PUBLISH TO GHCR (Runs only if 'test' passes)
   build-and-push:
     needs: test
     runs-on: ubuntu-latest
@@ -47,7 +68,7 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Extract metadata (tags, labels)
+      - name: Extract metadata
         id: meta
         uses: docker/metadata-action@v5
         with:

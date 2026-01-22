@@ -26,9 +26,7 @@ jobs:
           cache: maven             # Change to 'gradle' if using Gradle
 
       - name: Run Tests
-        run: |
-          chmod +x mvnw
-          ./mvnw test
+        run: mvn test
 
   # JOB 2: PUBLISH TO GHCR (Runs only if 'test' passes)
   build-and-push:

@@ -1,0 +1,29 @@
+services:
+  # 1. The Database Service
+  db:
+    image: mysql:8.0
+    container_name: mysql-container
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: hello_db
+    ports:
+      - "3307:3306" # Maps localhost:3307 -> container:3306 (avoids conflict if you have local MySQL)
+    healthcheck:
+      test: ["CMD", "mysqladmin" ,"ping", "-h", "localhost"]
+      timeout: 20s
+      retries: 10
+
+  # 2. Your Spring Boot App
+  app:
+    build: .
+    container_name: spring-boot-app
+    ports:
+      - "8080:8080"
+    depends_on:
+      db:
+        condition: service_healthy # Waits for MySQL to be ready before starting Java app
+    environment:
+      # Override localhost with the container name 'db'
+      SPRING_DATASOURCE_URL: jdbc:mysql://db:3306/hello_db?createDatabaseIfNotExist=true&allowPublicKeyRetrieval=true&useSSL=false
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: root
